@@ -1,0 +1,107 @@
+# Scheduler
+The aggregate job launcher of single-core or single-node applications on HPC sites
+
+Author: Victor Anisimov, NCSA Blue Waters, University of Illinois at Urbana-Champaign
+Send bug reports and requests for enhancement to anisimov@illinois.edu
+
+Content:
+01dir/           job directory
+02dir/           job directory
+03dir/           job directory
+ccm/             directory for Cray cluster compatibility mode
+joblist          list of jobs to run
+run              PBS script to launch the composite job on Cray
+scheduler.F90    source code
+scheduler.x      job launcher
+
+Distribution:
+The source code is distribute under the GNU Public License. Please let me know if you
+make any changes to the code so the improvements and the name of the Contributor get
+passed to the generations.
+
+Compilation:
+On Cray platform: ftn -o scheduler.x scheduler.F90
+Anywhere else: mpif90 -o scheduler.x scheduler.F90
+
+Handling application errors:
+Should be compiled under GNU programming environment in order for "system()" function
+return error code. (module swap PrgEnv-cray PrgEnv-gnu)
+
+Purpose:
+Submit a large set of single-core or threaded-single-node jobs.
+
+Usage:
+To start the job, type "qsub run".
+
+joblist format:
+Each line in this file defines a single job. The number of jobs to run is determined by
+the number of lines in the joblist file. Each line has two fileds separated by blank space.
+First field is directory where the job will be executed. The directory can be given with
+absolute path, e.g. /u/scratch/01dir/ if necessary. Second field is a command-line
+argument of the application to be submitted.
+
+Description:
+Following is the content of "run" script which is used to start the composite job.
+#! /bin/sh
+#PBS -j oe
+#PBS -l nodes=1:ppn=32:xe
+#PBS -l walltime=00:01:00
+#PBS -N ztest
+cd $PBS_O_WORKDIR
+aprun -n 3 ./scheduler.x joblist /bin/bash > log
+
+In this example, we reserve a single node and use 3 cores (-n 3) on the node.
+We will be reading the job list from "joblist" and using /bin/bash to execute the
+individual jobs (bash scripts, to be exact).
+
+The content of joblist is the following
+01dir job1.sh
+02dir job2.sh
+
+We want to run two jobs, each placed in a separate directory so that their output results
+will not be accidentally overwritten by another job. First job is located in 01dir/
+directory. The batch tool will cd to that directory and execute "/bin/bash job1.sh".
+Second job is located in 02dir/ directory, and the job to execute is "/bin/bash job2.sh".
+
+One can use absolute path in the job directory name. Use "." directory specificator
+in joblist to point to current working directory. Make sure your jobs do not write to the
+same file.
+
+As mentioned above, we will be running two jobs, each on a separate core. One extra core
+is necessary for the batch tool itself. That is why we ask for 3 cores from aprin (-n 3).
+That extra core will not do any computational work but listen for child processes getting
+ready to start new job. This is done to efficiently handle the case when number of jobs
+is greater than the number of compute cores.
+
+If the number of jobs is greater than the number of cores, the jobs will be executed in
+a loop after the cores currently running a job become available to start a new job.
+
+Example of running a bunch of threaded single-node jobs
+aprun -n 1280 -N 1 -d 32 ./scheduler.x joblist /home/user/bin/myOpenMPjob.x > log
+Out of the 40 nodes used, one node will run the batch tool and thus will be excluded from
+computation. Notice that the application /home/user/bin/myOpenMPjob.x has to be specified
+with full path or it may not be found during the execution.
+
+In this example, I assume that myOpenMPjob.x needs a single input argument that is specified
+in the joblist file in the second column
+
+joblist
+myfirstdir inputA.dat
+mysecondir inputB.dat
+
+Based on this information, the launcher executes the following commands
+"cd /cwd/myfirstdir; /home/user/bin/myOpenMPjob.x inputA.dat" and
+"cd /cwd/mysecondir; /home/user/bin/myOpenMPjob.x inputB.dat"
+
+Note, the launcher will construct the full path to the job directory unless the directory
+name already starts from "/".
+
+If the application requires a more elaborate input/start, e.g. it need two or more
+command-line arguments, wrap the job inito a shell script and use /bin/bash to run it as
+described in the first example.
+
+This tool is particularly handy to run a large number of (non-MPI) jobs on a limited
+number of nodes. To utilize this functionality, put more jobs in the joblist exceeding the
+number of requested cores.
+
+Final reminder. The composite job will wait for the last core to complete its job.
