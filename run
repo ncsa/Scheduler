@@ -1,0 +1,13 @@
+#!/bin/sh
+#PBS -j oe
+#PBS -l nodes=1:ppn=32:xe
+#PBS -l walltime=00:01:00
+#PBS -q debug
+#PBS -N ztest
+
+cd $PBS_O_WORKDIR
+
+source /opt/modules/default/init/bash
+module list
+
+aprun -n 3 ./scheduler.x joblist /bin/bash > out.log

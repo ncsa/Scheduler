@@ -1,0 +1,49 @@
+#!/bin/bash
+#PBS -j oe
+#PBS -l nodes=2:ppn=1:xe
+#PBS -l walltime=00:05:00
+#PBS -l gres=ccm
+#PBS -l flags=commlocal:commtolerant
+#PBS -q debug
+#PBS -N ztest
+
+source /opt/modules/default/init/bash
+module add ccm
+module list
+
+# START PARAMETER SECTION
+#------------------------------------------------
+# set the number of MPI tasks per node
+TPN=16
+
+# set number of nodes to run the job on (same as #PBS -l nodes=X)
+NNODES=2
+
+# set work directory
+WORKDIR=$PBS_O_WORKDIR
+
+# set name of nodelist file
+HOSTLIST=znodelist
+
+# set name of launch script
+LAUNCH=zstart.sh
+
+# END PARAMETER SECTION
+#------------------------------------------------
+
+cd $WORKDIR
+
+# create hostlist
+cat $HOME/.crayccm/ccm_nodelist.$PBS_JOBID | sort -u | awk -v n=$TPN '{for(i=0;i<n;i++) print $0}' > $HOSTLIST
+
+# compute total number of MPI tasks
+let NTASKS=$NNODES*$TPN 
+
+# create MPI start script
+echo "#!/bin/bash
+cd $PBS_O_WORKDIR
+$HOME/openmpi/bin/mpirun -v -np $NTASKS --mca btl tcp,self --mca btl_tcp_if_include ipogif0 --hostfile $HOSTLIST -npernode $TPN $HOME/scheduler/ccm/scheduler-ccm.x joblist /bin/bash > out.log" > $LAUNCH
+chmod 755 $LAUNCH
+
+# launch the MPI job
+ccmrun $HOME/scheduler/ccm/$LAUNCH
