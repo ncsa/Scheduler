@@ -24,7 +24,7 @@ In addition to efficiently managing single-core jobs, Scheduler can also bundle 
 
 Scheduler consists of less than 200 lines of source code. User is free to integrate this code into their workflow in order to further automate the job submission process.
 
-Schedule is written in Fortran 90 language. That makes the understanding of the algorithm a bliss.
+Schedule is written in Fortran 90 language. This makes the understanding of the algorithm a bliss.
 
 Limitations: 
 Scheduler cannot bundle up MPI jobs. Using regular batch queuing system would be the best for that purpose.
@@ -51,6 +51,22 @@ Anywhere else: mpif90 -o scheduler.x scheduler.F90
 Handling application errors:
 Should be compiled under GNU programming environment in order for "system()" function 
 return error code. (module swap PrgEnv-cray PrgEnv-gnu)
+
+Command-line arguments:
+scheduler.x joblist fullPathToExecutable [-nostdout] [-noexit]
+
+scheduler.x is a name of the job launcher.
+joblist is a mandatory argument that should always be specified in the place of the first argument.
+   It is a file that includes the list of jobs to be executed. See "joblist format" bellow 
+   for explanation of the format.
+fullPathToExecutable is a name of the application executable that will be invoked by the job launcher.
+   This executable executes jobs in the joblist. The executable could be a real application executable
+   or bash shell.
+-nostdout is an optional program argument. When present it will instruct the job launcher to redirect 
+   the job stdout to /dev/null. If this option is not present, the job stdout will be saved in .slog file.
+-noexit is an optional program argument. It instructs the job launcher to ignore the individual job 
+   failure and continue to other jobs in the list. If this argument is absent, job launcher will treat 
+   the job failure as a critical error and abnormally terminate.
 
 Usage:
 To start the job, type "qsub run".

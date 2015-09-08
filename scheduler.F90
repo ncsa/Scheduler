@@ -17,7 +17,9 @@ program scheduler
   integer, parameter     :: bSize = 32 + dnSize + fnSize
   character (len=bSize)  :: buffer, str
   character (len=32)     :: sFormat
-  integer                :: returnCode
+  integer                :: iArg, returnCode
+  logical                :: stdout = .TRUE., exitOnError = .TRUE.
+  character (len=512)    :: keyword
 
   integer :: chdir, err, iargc
 
@@ -27,9 +29,9 @@ program scheduler
 
   if(iam == 0) then
     ! check command-line arguments
-    if(iargc() /= 2) then
+    if(iargc() < 2 .or. iargc() > 4) then
       call getarg(0,cwd)
-      write(*,*) "Usage: ",trim(cwd), " masterJobFile fullPathToExecutable"
+      write(*,*) "Usage: ",trim(cwd), " masterJobFile fullPathToExecutable [-nostdout] [-noexit]"
       call MPI_ABORT(MPI_COMM_WORLD, mpierror)
     endif
 
@@ -71,6 +73,17 @@ program scheduler
     write(*,*) "ERROR: File ",trim(executable)," doesn't exist"
     call MPI_ABORT(MPI_COMM_WORLD, mpierror)
   endif
+
+  ! check presence of command-line options
+  do iArg = 3, iargc()
+    call getarg(iArg,keyword)
+    if(index(keyword,"-nostdout") > 0) then
+      stdout = .FALSE.
+    endif
+    if(index(keyword,"-noexit") > 0) then
+      exitOnError = .FALSE.
+    endif
+  enddo
 
   if(iam == 0) then
     !
@@ -128,12 +141,18 @@ program scheduler
         if(err /= 0) then
           write(*,'(a,i0,a,a)') "ERROR: ", iam, " cannot change directory to ", trim(jobDir)
         else
-          execute = trim(executable) // " " // trim(jobName) // " > " // trim(jobName) // ".slog"
+          if(stdout) then
+            execute = trim(executable) // " " // trim(jobName) // " > " // trim(jobName) // ".slog"
+          else
+            execute = trim(executable) // " " // trim(jobName) // " > /dev/null"
+          endif
           write(*,'(i0,2x,a,2x,a)') iam, trim(jobDir), trim(execute)
           call system(execute, returnCode)
           if(returnCode /= 0) then
-            write(*,'(a,i0,a,a,a,a)') "ERROR: ",iam," failed in ",trim(jobDir),"  ",trim(execute)
-            call exit(returnCode)  ! comment this line out if you want to ignore the application error
+            write(*,'(a,i0,a,a,a,a)') "ERROR: process ",iam," failed in ",trim(jobDir),"  ",trim(execute)
+            if(exitOnError) then
+              call exit(returnCode)
+            endif
           endif
         endif
 
