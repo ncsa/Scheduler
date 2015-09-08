@@ -24,7 +24,7 @@ In addition to efficiently managing single-core jobs, Scheduler can also bundle 
 
 Scheduler consists of less than 200 lines of source code. User is free to integrate this code into their workflow in order to further automate the job submission process.
 
-Schedule is written in Fortran 90 language. This makes the understanding of the algorithm a bliss.
+Scheduler is written in Fortran 90 language. This makes the understanding of the algorithm a bliss.
 
 Limitations: 
 Scheduler cannot bundle up MPI jobs. Using regular batch queuing system would be the best for that purpose.
