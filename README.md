@@ -1,4 +1,4 @@
-#Title: *The aggregate job launcher of single-core or single-node applications on HPC sites*
+##Title: *The Aggregate Job Launcher of Single-core or Single-node Applications on HPC Sites*
 
 Author: Victor Anisimov, NCSA Blue Waters, University of Illinois at Urbana-Champaign
 Send bug reports and requests for enhancement to anisimov@illinois.edu
