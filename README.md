@@ -1,9 +1,11 @@
-###Title: *The Aggregate Job Launcher of Single-core or Single-node Applications on HPC Sites*
+# The Aggregate Job Launcher of Single-core or Single-node Applications on HPC Sites
 
 Author: Victor Anisimov, NCSA Blue Waters, University of Illinois at Urbana-Champaign
+
 Send bug reports and requests for enhancement to anisimov@illinois.edu
 
-Purpose:
+## Purpose
+
 The purpose of Scheduler is to help user to submit large number of independent jobs into the queue on HPC sites in the form of a single job. 
 
 On HPC sites, the job submission is managed by resource managers like Torque or PBS, which are batch queuing systems. The job submission is tailored toward submitting parallel MPI jobs that may use from a few to thousands of compute nodes per application. The job is submitted to the queue with help of a qsub command. Each submitted job obtains a jobid.
@@ -26,11 +28,13 @@ Scheduler consists of less than 200 lines of source code. User is free to integr
 
 Scheduler is written in Fortran 90 language. This makes the understanding of the algorithm a bliss.
 
-Limitations: 
+## Limitations
+
 Scheduler cannot bundle up MPI jobs. Using regular batch queuing system would be the best for that purpose.
 One core (node) is dedicated to the job management and does not run jobs.
 
-Content:
+## Content
+```
 01dir/           job directory
 02dir/           job directory
 02dir/           job directory
@@ -38,50 +42,60 @@ joblist          list of jobs to run
 run              PBS script to launch the composite (bundled) job on Cray
 scheduler.F90    source code
 scheduler.x      job launcher
+```
 
-Distribution:
+## Distribution
+
 The source code is distribute under the GNU Public License. Please let me know if you 
 make any changes to the code so the improvements and the name of the Contributor get 
 passed on to the generations.
 
-Compilation:
+## Compilation
+```
 On Cray platform: ftn -o scheduler.x scheduler.F90
 Anywhere else: mpif90 -o scheduler.x scheduler.F90
+```
 
-Handling application errors:
-Should be compiled under GNU programming environment in order for "system()" function 
-return error code. (module swap PrgEnv-cray PrgEnv-gnu)
+## Handling application errors
 
-Command-line arguments:
-scheduler.x joblist fullPathToExecutable [-nostdout] [-noexit]
+Should be compiled under GNU programming environment in order for `system()` function 
+return error code. (`module swap PrgEnv-cray PrgEnv-gnu`)
 
-scheduler.x is a name of the job launcher.
-joblist is a mandatory argument that should always be specified in the place of the 
+## Command-line arguments
+
+`scheduler.x joblist fullPathToExecutable [-nostdout] [-noexit]`
+
+* `scheduler.x` is a name of the job launcher.
+* `joblist` is a mandatory argument that should always be specified in the place of the 
    first argument.  It is a file that includes the list of jobs to be executed. See 
    "joblist format" bellow for explanation of the format.
-fullPathToExecutable is a name of the application executable that will be invoked 
+* `fullPathToExecutable` is a name of the application executable that will be invoked 
    by the job launcher.  This executable executes jobs in the joblist. The executable 
    could be a real application executable or bash shell.
--nostdout is an optional program argument. When present it will instruct the job 
-   launcher to redirect the job stdout to /dev/null. If this option is not present, 
+* `-nostdout` is an optional program argument. When present it will instruct the job 
+   launcher to redirect the job stdout to `/dev/null`. If this option is not present, 
    the job stdout will be saved in .slog file.
--noexit is an optional program argument. It instructs the job launcher to ignore the 
+* `-noexit` is an optional program argument. It instructs the job launcher to ignore the 
    individual job failure and continue to other jobs in the list. If this argument 
    is absent, job launcher will treat the job failure as a critical error and 
    abnormally terminate.
 
-Usage:
-To start the job, type "qsub run".
+## Usage
 
-joblist format:
+To start the job, type `qsub run`.
+
+## joblist format
+
 Each line in this file defines a single job. The number of jobs to run is determined by 
 the number of lines in the joblist file. Each line has two fileds separated by blank space.
 First field is directory where the job will be executed. The directory can be given with
-absolute path, e.g. /u/scratch/01dir/ if necessary. Second field is a command-line
+absolute path, e.g. `/u/scratch/01dir/` if necessary. Second field is a command-line
 argument of the application to be submitted.
 
-Description:
-Following is the content of "run" script which is used to start the composite job.
+## Description
+
+Following is the content of `run` script which is used to start the composite job.
+```
 #! /bin/sh
 #PBS -j oe
 #PBS -l nodes=1:ppn=32:xe
@@ -89,26 +103,29 @@ Following is the content of "run" script which is used to start the composite jo
 #PBS -N ztest
 cd $PBS_O_WORKDIR
 aprun -n 3 ./scheduler.x joblist /bin/bash > log
+```
 
-In this example, we reserve a single node and use 3 cores (-n 3) on the node. 
-We will be reading the job list from "joblist" and using /bin/bash to execute the 
+In this example, we reserve a single node and use 3 cores (`-n 3`) on the node. 
+We will be reading the job list from `joblist` and using `/bin/bash` to execute the 
 individual jobs (bash scripts, to be exact).
 
-The content of joblist is the following
+The content of joblist is the following:
+```
 01dir job1.sh
 02dir job2.sh
+```
 
 We want to run two jobs, each placed in a separate directory so that their output results 
-will not be accidentally overwritten by another job. First job is located in 01dir/ 
-directory. The batch tool will cd to that directory and execute "/bin/bash job1.sh". 
-Second job is located in 02dir/ directory, and the job to execute is "/bin/bash job2.sh".
+will not be accidentally overwritten by another job. First job is located in `01dir/` 
+directory. The batch tool will cd to that directory and execute `/bin/bash job1.sh`. 
+Second job is located in `02dir/` directory, and the job to execute is `/bin/bash job2.sh`.
 
 One can use absolute path in the job directory name. Use "." directory specificator
 in joblist to point to current working directory. Make sure your jobs do not write to the 
 same file.
 
 As mentioned above, we will be running two jobs, each on a separate core. One extra core 
-is necessary for the batch tool itself. That is why we ask for 3 cores from aprin (-n 3).
+is necessary for the batch tool itself. That is why we ask for 3 cores from aprin (`-n 3`).
 That extra core will not do any computational work but listen for child processes getting 
 ready to start new job. This is done to efficiently handle the case when number of jobs
 is greater than the number of compute cores.
@@ -116,28 +133,34 @@ is greater than the number of compute cores.
 If the number of jobs is greater than the number of cores, the jobs will be executed in 
 a loop after the cores currently running a job become available to start a new job.
 
-Example of running a bunch of threaded single-node jobs
-aprun -n 1280 -N 1 -d 32 ./scheduler.x joblist /home/user/bin/myOpenMPjob.x > log
+Example of running a bunch of threaded single-node jobs:
+
+`aprun -n 1280 -N 1 -d 32 ./scheduler.x joblist /home/user/bin/myOpenMPjob.x > log`
+
 Out of the 40 nodes used, one node will run the batch tool and thus will be excluded from
-computation. Notice that the application /home/user/bin/myOpenMPjob.x has to be specified 
+computation. Notice that the application `/home/user/bin/myOpenMPjob.x` has to be specified 
 with full path or it may not be found during the execution.
 
-In this example, I assume that myOpenMPjob.x needs a single input argument that is specified 
+In this example, I assume that `myOpenMPjob.x` needs a single input argument that is specified 
 in the joblist file in the second column
 
-joblist
+joblist:
+```
 myfirstdir inputA.dat
 mysecondir inputB.dat
+```
 
-Based on this information, the launcher executes the following commands
+Based on this information, the launcher executes the following commands:
+```
 "cd /cwd/myfirstdir; /home/user/bin/myOpenMPjob.x inputA.dat" and 
 "cd /cwd/mysecondir; /home/user/bin/myOpenMPjob.x inputB.dat" 
+```
 
 Note, the launcher will construct the full path to the job directory unless the directory 
 name already starts from "/". 
 
 If the application requires a more elaborate input/start, e.g. it need two or more
-command-line arguments, wrap the job inito a shell script and use /bin/bash to run it as
+command-line arguments, wrap the job inito a shell script and use `/bin/bash` to run it as
 described in the first example.
 
 This tool is particularly handy to run a large number of (non-MPI) jobs on a limited 
