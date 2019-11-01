@@ -20,6 +20,7 @@ program scheduler
   integer                :: iArg, returnCode
   logical                :: stdout = .TRUE., exitOnError = .TRUE.
   character (len=512)    :: keyword
+  real (kind=8)          :: tstart, tend
 
   integer :: chdir, err, iargc
 
@@ -147,6 +148,7 @@ program scheduler
             execute = trim(executable) // " " // trim(jobName) // " > /dev/null"
           endif
           write(*,'(i0,2x,a,2x,a)') iam, trim(jobDir), trim(execute)
+          tstart = MPI_Wtime()
           call system(execute, returnCode)
           if(returnCode /= 0) then
             write(*,'(a,i0,a,a,a,a)') "ERROR: process ",iam," failed in ",trim(jobDir),"  ",trim(execute)
@@ -154,6 +156,8 @@ program scheduler
               call exit(returnCode)
             endif
           endif
+          tend = MPI_Wtime()
+          write(*,'(a,a,f10.2)') trim(jobDir),":_seconds_:",tend-tstart
         endif
 
       endif
