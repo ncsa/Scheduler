@@ -2,7 +2,7 @@
 
 Author: Victor Anisimov, NCSA Blue Waters, University of Illinois at Urbana-Champaign
 
-Send bug reports and requests for enhancement to anisimov@illinois.edu
+Send bug reports and requests for enhancement to victor_anisimov@hotmail.com
 
 ## Purpose
 
