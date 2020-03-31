@@ -88,7 +88,7 @@ program scheduler
 
   if(iam == 0) then
     !
-    ! Master process
+    ! managing process
     !
     open(unit=iunit, file=masterJobFile, status='OLD', form='FORMATTED')
     do i = 1, nJobs + nMPIprocs - 1
@@ -122,7 +122,7 @@ program scheduler
 
   else
     !
-    ! Slave process
+    ! working process
     !
     newJob = .true.  ! expect to receive new job from master
     do while (newJob)
